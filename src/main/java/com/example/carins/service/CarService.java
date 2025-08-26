@@ -2,6 +2,7 @@ package com.example.carins.service;
 
 import com.example.carins.model.Car;
 import com.example.carins.model.InsuranceClaim;
+import com.example.carins.model.InsurancePolicy;
 import com.example.carins.repo.CarRepository;
 import com.example.carins.repo.InsuranceClaimRepository;
 import com.example.carins.repo.InsurancePolicyRepository;
@@ -16,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CarService {
@@ -37,6 +39,15 @@ public class CarService {
     public boolean isInsuranceValid(Long carId, LocalDate date) {
         if (carId == null || date == null) return false;
         // TODO: optionally throw NotFound if car does not exist
+        if(!carRepository.existsById(carId)){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Car not found with id " + carId);
+        }
+        List<InsurancePolicy> policies = policyRepository.findByCarId(carId);
+        Optional<InsurancePolicy> activePolicy = policies.stream().filter(p->!date.isBefore(p.getStartDate()) && !date.isAfter(p.getEndDate())).findFirst();
+
+        if(activePolicy.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Insurance not valid on this date");
+        }
         return policyRepository.existsActiveOnDate(carId, date);
     }
 

@@ -18,8 +18,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
+import java.time.DateTimeException;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -39,7 +42,15 @@ public class CarController {
     @GetMapping("/cars/{carId}/insurance-valid")
     public ResponseEntity<?> isInsuranceValid(@PathVariable Long carId, @RequestParam String date) {
         // TODO: validate date format and handle errors consistently
-        LocalDate d = LocalDate.parse(date);
+        LocalDate d;
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        try{
+            d = LocalDate.parse(date,formatter);
+        }catch (DateTimeException e){
+            Map<String, String> error = Map.of(
+                    "error", "Invalid date format. Use yyyy-MM-dd");
+            return ResponseEntity.badRequest().body(error);
+        }
         boolean valid = service.isInsuranceValid(carId, d);
         return ResponseEntity.ok(new InsuranceValidityResponse(carId, d.toString(), valid));
     }
