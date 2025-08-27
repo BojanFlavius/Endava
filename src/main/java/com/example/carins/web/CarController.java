@@ -21,6 +21,7 @@ import java.net.URI;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.ResolverStyle;
 import java.util.List;
 import java.util.Map;
 
@@ -43,16 +44,15 @@ public class CarController {
     public ResponseEntity<?> isInsuranceValid(@PathVariable Long carId, @RequestParam String date) {
         // TODO: validate date format and handle errors consistently
         LocalDate d;
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                .withResolverStyle(ResolverStyle.STRICT);
         try{
             d = LocalDate.parse(date,formatter);
+            boolean valid = service.isInsuranceValid(carId, d);
+            return ResponseEntity.ok(new InsuranceValidityResponse(carId, d.toString(), valid));
         }catch (DateTimeException e){
-            Map<String, String> error = Map.of(
-                    "error", "Invalid date format. Use yyyy-MM-dd");
-            return ResponseEntity.badRequest().body(error);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid date format. Use yyyy-MM-dd");
         }
-        boolean valid = service.isInsuranceValid(carId, d);
-        return ResponseEntity.ok(new InsuranceValidityResponse(carId, d.toString(), valid));
     }
 
     @PostMapping("/cars/{carId}/claims")

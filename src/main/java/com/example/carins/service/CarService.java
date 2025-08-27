@@ -37,18 +37,22 @@ public class CarService {
     }
 
     public boolean isInsuranceValid(Long carId, LocalDate date) {
-        if (carId == null || date == null) return false;
-        // TODO: optionally throw NotFound if car does not exist
+        if (carId == null || date == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Car ID and date must not be null");
+        }
+
         if(!carRepository.existsById(carId)){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Car not found with id " + carId);
         }
         List<InsurancePolicy> policies = policyRepository.findByCarId(carId);
-        Optional<InsurancePolicy> activePolicy = policies.stream().filter(p->!date.isBefore(p.getStartDate()) && !date.isAfter(p.getEndDate())).findFirst();
+        Optional<InsurancePolicy> activePolicy = policies.stream()
+                .filter(p->!date.isBefore(p.getStartDate()) && !date.isAfter(p.getEndDate()))
+                .findFirst();
 
         if(activePolicy.isEmpty()){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Insurance not valid on this date");
         }
-        return policyRepository.existsActiveOnDate(carId, date);
+        return true;
     }
 
     public InsuranceClaimResponse createClaimForCar(Long carId, @Valid InsuranceClaimRequest claimRequest) {
