@@ -26,7 +26,9 @@ public class CarService {
     private final InsurancePolicyRepository policyRepository;
     private final InsuranceClaimRepository insuranceClaimRepository;
 
-    public CarService(CarRepository carRepository, InsurancePolicyRepository policyRepository, InsuranceClaimRepository insuranceClaimRepository) {
+    public CarService(CarRepository carRepository,
+                      InsurancePolicyRepository policyRepository,
+                      InsuranceClaimRepository insuranceClaimRepository) {
         this.carRepository = carRepository;
         this.policyRepository = policyRepository;
         this.insuranceClaimRepository = insuranceClaimRepository;
@@ -37,28 +39,29 @@ public class CarService {
     }
 
     public boolean isInsuranceValid(Long carId, LocalDate date) {
-        if (carId == null || date == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Car ID and date must not be null");
+        if (!carRepository.existsById(carId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Car not found with id " + carId);
         }
 
-        if(!carRepository.existsById(carId)){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Car not found with id " + carId);
-        }
-        List<InsurancePolicy> policies = policyRepository.findByCarId(carId);
-        Optional<InsurancePolicy> activePolicy = policies.stream()
-                .filter(p->!date.isBefore(p.getStartDate()) && !date.isAfter(p.getEndDate()))
-                .findFirst();
+        boolean hasValidPolicy = policyRepository.findByCarId(carId).stream()
+                .anyMatch(p -> !date.isBefore(p.getStartDate()) && !date.isAfter(p.getEndDate()));
 
-        if(activePolicy.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Insurance not valid on this date");
+        if (!hasValidPolicy) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insurance not valid on this date");
         }
+
         return true;
     }
 
     public InsuranceClaimResponse createClaimForCar(Long carId, @Valid InsuranceClaimRequest claimRequest) {
-        Car car = carRepository.findById(carId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Car not found with id " + carId));
-        InsuranceClaim claim = new InsuranceClaim();
+        Car car = carRepository.findById(carId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Car not found with id " + carId));
 
+        if (claimRequest.claimDate().isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Claim date cannot be in the future");
+        }
+
+        InsuranceClaim claim = new InsuranceClaim();
         claim.setCar(car);
         claim.setClaimDate(claimRequest.claimDate());
         claim.setDescription(claimRequest.description());
@@ -66,17 +69,23 @@ public class CarService {
 
         InsuranceClaim savedClaim = insuranceClaimRepository.save(claim);
 
-        return new InsuranceClaimResponse(savedClaim.getId(),savedClaim.getClaimDate(),savedClaim.getDescription(), savedClaim.getAmount(), car.getId());
+        return new InsuranceClaimResponse(
+                savedClaim.getId(),
+                savedClaim.getClaimDate(),
+                savedClaim.getDescription(),
+                savedClaim.getAmount(),
+                car.getId()
+        );
     }
 
     public List<CarHistoryEvent> getClaimsForCar(Long carId) {
-        if(!carRepository.existsById(carId)) {
+        if (!carRepository.existsById(carId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Car not found with id " + carId);
         }
-        List<InsuranceClaim> claims = insuranceClaimRepository.findByCarId(carId);
 
-        return claims.stream().sorted(Comparator.comparing(InsuranceClaim::getClaimDate).reversed())
-                .map(c -> new CarHistoryEvent(c.getClaimDate(),c.getDescription(),c.getAmount()))
+        return insuranceClaimRepository.findByCarId(carId).stream()
+                .sorted(Comparator.comparing(InsuranceClaim::getClaimDate).reversed())
+                .map(c -> new CarHistoryEvent(c.getClaimDate(), c.getDescription(), c.getAmount()))
                 .toList();
     }
 }

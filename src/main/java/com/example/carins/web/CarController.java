@@ -1,29 +1,18 @@
 package com.example.carins.web;
 
 import com.example.carins.model.Car;
-import com.example.carins.model.InsuranceClaim;
-import com.example.carins.repo.CarRepository;
 import com.example.carins.service.CarService;
 import com.example.carins.web.dto.CarDto;
 import com.example.carins.web.dto.CarHistoryEvent;
 import com.example.carins.web.dto.InsuranceClaimRequest;
 import com.example.carins.web.dto.InsuranceClaimResponse;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Null;
-import org.springframework.expression.spel.ast.NullLiteral;
-import org.springframework.http.HttpStatus;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.net.URI;
-import java.time.DateTimeException;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.ResolverStyle;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -31,7 +20,7 @@ public class CarController {
 
     private final CarService service;
 
-    public CarController(CarService service){
+    public CarController(CarService service) {
         this.service = service;
     }
 
@@ -41,41 +30,41 @@ public class CarController {
     }
 
     @GetMapping("/cars/{carId}/insurance-valid")
-    public ResponseEntity<?> isInsuranceValid(@PathVariable Long carId, @RequestParam String date) {
-        // TODO: validate date format and handle errors consistently
-        LocalDate d;
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                .withResolverStyle(ResolverStyle.STRICT);
-        try{
-            d = LocalDate.parse(date,formatter);
-            boolean valid = service.isInsuranceValid(carId, d);
-            return ResponseEntity.ok(new InsuranceValidityResponse(carId, d.toString(), valid));
-        }catch (DateTimeException e){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid date format. Use yyyy-MM-dd");
-        }
+    public ResponseEntity<InsuranceValidityResponse> isInsuranceValid(
+            @PathVariable Long carId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+
+        boolean valid = service.isInsuranceValid(carId, date);
+        return ResponseEntity.ok(new InsuranceValidityResponse(carId, date.toString(), valid));
     }
 
     @PostMapping("/cars/{carId}/claims")
-    public ResponseEntity<?> claimInsurance(@PathVariable Long carId, @Valid @RequestBody InsuranceClaimRequest claimRequest){
+    public ResponseEntity<InsuranceClaimResponse> claimInsurance(
+            @PathVariable Long carId,
+            @RequestBody @Valid InsuranceClaimRequest claimRequest) {
+
         InsuranceClaimResponse response = service.createClaimForCar(carId, claimRequest);
-
-        URI location = URI.create("/cars/" + carId + "/claims/" + response.id());
-
-        return ResponseEntity.created(location).body(response);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/cars/{carId}/history")
-    public ResponseEntity<?> carHistory(@PathVariable Long carId){
+    public ResponseEntity<List<CarHistoryEvent>> carHistory(@PathVariable Long carId) {
         List<CarHistoryEvent> claims = service.getClaimsForCar(carId);
         return ResponseEntity.ok(claims);
     }
 
     private CarDto toDto(Car c) {
         var o = c.getOwner();
-        return new CarDto(c.getId(), c.getVin(), c.getMake(), c.getModel(), c.getYearOfManufacture(),
+        return new CarDto(
+                c.getId(),
+                c.getVin(),
+                c.getMake(),
+                c.getModel(),
+                c.getYearOfManufacture(),
                 o != null ? o.getId() : null,
                 o != null ? o.getName() : null,
-                o != null ? o.getEmail() : null);
+                o != null ? o.getEmail() : null
+        );
     }
 
     public record InsuranceValidityResponse(Long carId, String date, boolean valid) {}

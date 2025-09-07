@@ -22,7 +22,7 @@ public class InsuranceScheduler {
         this.policyRepository = policyRepository;
     }
 
-    @Scheduled(fixedRate = 600_000)
+    @Scheduled(cron = "0 */10 * * * *")
     public void logRecentlyExpiredPolices(){
         LocalDate now = LocalDate.now();
 
