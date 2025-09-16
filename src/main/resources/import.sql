@@ -28,3 +28,5 @@ INSERT INTO insuranceclaim (id, car_id, claim_date, description, amount) VALUES 
 INSERT INTO insuranceclaim (id, car_id, claim_date, description, amount) VALUES (3, 2, DATE '2025-05-20', 'Rear bumper repair after collision', 1500.00);
 INSERT INTO insuranceclaim (id, car_id, claim_date, description, amount) VALUES (4, 3, DATE '2025-01-05', 'Theft of mirrors', 600.00);
 INSERT INTO insuranceclaim (id, car_id, claim_date, description, amount) VALUES (5, 4, DATE '2024-11-18', 'Hail damage on hood and roof', 2000.00);
+
+ALTER TABLE insuranceclaim ALTER COLUMN id RESTART WITH 100;

@@ -17,8 +17,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -139,4 +138,93 @@ class CarInsuranceApplicationTests {
                                 .content(requestJson))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void createPolicy_existingCar_shouldSucceed() throws Exception {
+        String requestJson = """
+    {
+      "provider": "NewProvider",
+      "startDate": "2025-10-01",
+      "endDate": "2026-10-01"
+    }
+    """;
+
+        mockMvc.perform(post("/api/policies/car/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertTrue(result.getResponse().getContentAsString().contains("NewProvider")));
+    }
+
+    @Test
+    void createPolicy_nonExistingCar_shouldFail() throws Exception {
+        String requestJson = """
+    {
+      "provider": "TestProvider",
+      "startDate": "2025-10-01",
+      "endDate": "2026-10-01"
+    }
+    """;
+
+        mockMvc.perform(post("/api/policies/car/999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updatePolicy_existingPolicy_shouldSucceed() throws Exception {
+        String requestJson = """
+    {
+      "provider": "UpdatedProvider",
+      "startDate": "2025-01-01",
+      "endDate": "2026-01-01"
+    }
+    """;
+
+        mockMvc.perform(put("/api/policies/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertTrue(result.getResponse().getContentAsString().contains("UpdatedProvider")));
+    }
+
+    @Test
+    void updatePolicy_nonExistingPolicy_shouldFail() throws Exception {
+        String requestJson = """
+    {
+      "provider": "UpdatedProvider",
+      "startDate": "2025-01-01",
+      "endDate": "2026-01-01"
+    }
+    """;
+
+        mockMvc.perform(put("/api/policies/999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getPoliciesForNonExistingCar_shouldFail() throws Exception {
+        mockMvc.perform(get("/api/policies/car/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void createPolicy_invalidDates_shouldFail() throws Exception {
+        String requestJson = """
+    {
+      "provider": "InvalidDates",
+      "startDate": "2026-01-01",
+      "endDate": "2025-01-01"
+    }
+    """;
+
+        mockMvc.perform(post("/api/policies/car/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest());
+    }
+
 }

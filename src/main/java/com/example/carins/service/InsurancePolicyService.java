@@ -4,10 +4,13 @@ import com.example.carins.model.Car;
 import com.example.carins.model.InsurancePolicy;
 import com.example.carins.repo.CarRepository;
 import com.example.carins.repo.InsurancePolicyRepository;
+import com.example.carins.web.dto.InsurancePolicyRequest;
+import com.example.carins.web.dto.InsurancePolicyResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -21,22 +24,63 @@ public class InsurancePolicyService {
         this.carRepository = carRepository;
     }
 
-    public InsurancePolicy createPolicy(Long carId, InsurancePolicy policy) {
+    public List<InsurancePolicyResponse> getPoliciesForCar(Long carId) {
+        if (!carRepository.existsById(carId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Car not found with id " + carId);
+        }
+
+        return policyRepository.findByCarId(carId).stream()
+                .map(policy -> new InsurancePolicyResponse(
+                        policy.getId(),
+                        policy.getProvider(),
+                        policy.getStartDate(),
+                        policy.getEndDate(),
+                        carId
+                ))
+                .toList();
+    }
+
+    public InsurancePolicyResponse createPolicy(Long carId, InsurancePolicyRequest request) {
         Car car = carRepository.findById(carId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Car not found with id " + carId));
 
+        if (request.startDate().isAfter(request.endDate())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start date cannot be after end date");
+        }
+
+        InsurancePolicy policy = new InsurancePolicy();
         policy.setCar(car);
-        return policyRepository.save(policy);
+        policy.setProvider(request.provider());
+        policy.setStartDate(request.startDate());
+        policy.setEndDate(request.endDate());
+
+        InsurancePolicy saved = policyRepository.save(policy);
+
+        return new InsurancePolicyResponse(
+                saved.getId(),
+                saved.getProvider(),
+                saved.getStartDate(),
+                saved.getEndDate(),
+                car.getId()
+        );
     }
 
-    public InsurancePolicy updatePolicy(Long policyId, InsurancePolicy updatedPolicy) {
+    public InsurancePolicyResponse updatePolicy(Long policyId, InsurancePolicyRequest request) {
         InsurancePolicy existing = policyRepository.findById(policyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Policy not found with id " + policyId));
 
-        existing.setProvider(updatedPolicy.getProvider());
-        existing.setStartDate(updatedPolicy.getStartDate());
-        existing.setEndDate(updatedPolicy.getEndDate());
+        existing.setProvider(request.provider());
+        existing.setStartDate(request.startDate());
+        existing.setEndDate(request.endDate());
 
-        return policyRepository.save(existing);
+        InsurancePolicy saved = policyRepository.save(existing);
+
+        return new InsurancePolicyResponse(
+                saved.getId(),
+                saved.getProvider(),
+                saved.getStartDate(),
+                saved.getEndDate(),
+                saved.getCar().getId()
+        );
     }
 }

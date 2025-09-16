@@ -2,9 +2,13 @@ package com.example.carins.web;
 
 import com.example.carins.model.InsurancePolicy;
 import com.example.carins.service.InsurancePolicyService;
+import com.example.carins.web.dto.InsurancePolicyRequest;
+import com.example.carins.web.dto.InsurancePolicyResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/policies")
@@ -16,17 +20,25 @@ public class InsurancePolicyController {
         this.policyService = policyService;
     }
 
+    @GetMapping("/car/{carId}")
+    public List<InsurancePolicyResponse> getPoliciesForCar(@PathVariable Long carId) {
+        return policyService.getPoliciesForCar(carId);
+    }
+
     @PostMapping("/car/{carId}")
-    public ResponseEntity<InsurancePolicy> createPolicy(
+    public ResponseEntity<InsurancePolicyResponse> createPolicy(
             @PathVariable Long carId,
-            @Valid @RequestBody InsurancePolicy policy) {
-        return ResponseEntity.ok(policyService.createPolicy(carId, policy));
+            @Valid @RequestBody InsurancePolicyRequest request) {
+        InsurancePolicyResponse response = policyService.createPolicy(carId, request);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{policyId}")
-    public ResponseEntity<InsurancePolicy> updatePolicy(
+    public ResponseEntity<InsurancePolicyResponse> updatePolicy(
             @PathVariable Long policyId,
-            @Valid @RequestBody InsurancePolicy updatedPolicy) {
-        return ResponseEntity.ok(policyService.updatePolicy(policyId, updatedPolicy));
+            @Valid @RequestBody InsurancePolicyRequest request) {
+
+        InsurancePolicyResponse response = policyService.updatePolicy(policyId, request);
+        return ResponseEntity.ok(response);
     }
 }
