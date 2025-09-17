@@ -26,12 +26,10 @@ public class InsuranceScheduler {
     public void logRecentlyExpiredPolices(){
         LocalDate now = LocalDate.now();
 
-        List<InsurancePolicy> policies = policyRepository.findAll();
+        List<InsurancePolicy> policies = policyRepository.findExpiredPolicies();
 
         for(InsurancePolicy policy:policies){
-            LocalDate endDate = policy.getEndDate();
-
-            if(endDate.isEqual(now) && !loggedPolicies.contains(policy.getId())){
+            if(!loggedPolicies.contains(policy.getId())){
                 System.out.println("Policy " + policy.getId() + " for car " + policy.getCar().getId() + " expired on " + policy.getEndDate());
 
                 loggedPolicies.add(policy.getId());
